@@ -8,6 +8,8 @@
 #define OUTPUT_PIN 8
 #define LED_PIN 13
 #define BASE_A 440
+#define TEMPO_PIN A1
+#define MODE_ROTATE -1
 
 
 char* songs[] = {"O4c1c1c1c3  O3G3A3  O4c1_1O3A1O4c3_6  _6_6\0",
@@ -22,18 +24,30 @@ char* songs[] = {"O4c1c1c1c3  O3G3A3  O4c1_1O3A1O4c3_6  _6_6\0",
                  "O3e2e2e2_2  e2e2e2_2  e2g2c3d1e4_4  f2f2f2_1f1  f2e2e2_1e1  e2d2d2e2d4g4  O3e2e2e2_2  e2e2e2_2  e2g2c3d1e4_4  f2f2f2_1f1  f2e2e2e1e1  g2g2a2b2O4c2_2  O2c1_3",
                  "O2c3d3D3e3  f1g1f4  _6  O2c3d3D3e3  f1g1f4  _6  O3c6  O2b6  O3d6c6  c3O2b3a3g3  e1d1c4  _6"};
 
+int g_num_songs = 9;
+int g_song_num = MODE_ROTATE;
+int g_song_num_changed = false;
+
 void setup() {
   pinMode(OUTPUT_PIN, OUTPUT);
-  pinMode(LED_PIN, OUTPUT);
+  pinMode(LED_PIN, OUTPUT); 
+  
+  attachInterrupt(0, change_song, RISING);
+  Serial.begin(9600);
 }
 
 void play_note(char note, unsigned int octave, int duration_ms);
 
 void loop() {
-  for (int i=0; i<9; i++) {
-    parse_song(songs[i]);
-    delay(1000);
-  }
+  static int i = 0; // current song number
+  Serial.print(songs[i]);
+  
+  parse_song(songs[i]);
+  i = (g_song_num == MODE_ROTATE) ? i+1 : g_song_num;
+  i = i % g_num_songs;
+  Serial.print(i); Serial.print(" ");
+  Serial.println(g_song_num);
+  delay(1000);
 }
 
 void parse_song(char* song) {
@@ -51,6 +65,15 @@ void parse_song(char* song) {
     
     if (param < '1' || param > '9') continue;
     param = param - '1' + 1;
+    
+    // Read tempo
+    
+    base_duration = analogRead(TEMPO_PIN)/10 + 100; // Minimum will be 100 ms
+    
+    if (g_song_num_changed) {
+      g_song_num_changed = false;
+      break;
+    }
       
     if (command == 'O') {
       octave = param;
@@ -99,5 +122,12 @@ void play_note(char note, unsigned int octave, int duration_ms) {
   delay(duration_ms);
   digitalWrite(LED_PIN, LOW);
   delay(20);
+}
+
+void change_song() {
+  g_song_num = (g_song_num == g_num_songs-1) ? MODE_ROTATE : g_song_num+1;
+  g_song_num_changed = true;
+  Serial.println(g_song_num);
+  
 }
 
