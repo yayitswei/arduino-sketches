@@ -20,8 +20,6 @@
 
 #define NUM_WORDS 3
 #define MAX_WORD_LENGTH 12
-#define MAX_SONG_LENGTH 512
-#define MAX_NOTES 42
 
 int g_song_num = MODE_ROTATE;
 int g_song_num_changed = false;
@@ -47,7 +45,7 @@ void loop() {
   delay(1000);
 }
 
-void parse_song(char* song) {
+void parse_song(const char* song) {
   // Songs that
   int mode = get_song_mode(song);
 
@@ -64,7 +62,7 @@ void parse_song(char* song) {
   } // Skip songs that have MODE_BAD
 }
 
-int get_song_mode(char* song) {
+int get_song_mode(const char* song) {
   char command = song[0];
   char param = song[1];
   if (command == '\0' || param == '\0') return MODE_BAD;
@@ -75,10 +73,10 @@ int get_song_mode(char* song) {
   }
 }
 
-void parse_abc(char* song) {
+void parse_abc(const char* song) {
   // If the character is a number, skip, because the previous
   // letter should have taken care of the instruction
-  for (unsigned int i=0; i<MAX_SONG_LENGTH; i++) {
+  for (unsigned int i=0; i<strlen(song); i++) {
     char command = song[i];
     char param = song[i+1];
     if (command == '\0' || param == '\0') return;
@@ -97,50 +95,48 @@ void parse_abc(char* song) {
   }
 }
 
-void parse_clj(const char* song_orig) {
-  char song[MAX_SONG_LENGTH];
-  #ifdef DEBUG
-    Serial.println("Copying song");
-  #endif
-  strcpy(song, song_orig);
+void parse_clj(const char* song) {
+  char token[MAX_WORD_LENGTH];
+  char* cursor = (char *)song;
+  int n = 0; // token_size
 
-  // Not terribly efficient, but loads the file first before playing anything
-  char* tokens[MAX_NOTES];
+  for (int i=0; i<strlen(song); i++) {
+    int freq, duration_ms, vol;
+    boolean eol = tokenize(cursor, ' ', n);
+    if (n > 0) {
+      memset(token, 0, MAX_WORD_LENGTH);
+      strncpy(token, cursor, n);
+      #ifdef DEBUG
+        Serial.print(n); Serial.print(" "); Serial.print("Token: "); Serial.println(token);
+      #endif
 
-  #ifdef DEBUG
-    Serial.println("Tokenizing");
-  #endif
-  tokens[0] = strtok(song, " ");
-  if (tokens[0] == NULL) return;
-  for (int i=1; i<MAX_NOTES; i++) {
-    tokens[i] = strtok(NULL, " ");
-    if (tokens[i] == NULL) break;
-    #ifdef DEBUG
-      Serial.println(tokens[i]);
-    #endif
-  }
-  #ifdef DEBUG
-    Serial.println("Done parsing.");
-  #endif
+      if (g_song_num_changed) {
+        g_song_num_changed = false;
+        break;
+      }
 
-  // Now the tokens should be loaded
-  for (int i=0; i<MAX_NOTES; i++) {
-    if (tokens[i] == NULL) break;
+      if (split_clj(token, freq, duration_ms, vol)) {
+        #ifdef DEBUG
+          Serial.print(i); Serial.print(" Note split: "); Serial.print(freq); Serial.print("\t"); Serial.print(duration_ms); Serial.print("\t"); Serial.println(vol);
+        #endif
 
-    if (g_song_num_changed) {
-      g_song_num_changed = false;
-      break;
+        play_clj(freq, duration_ms, vol);
+      }
     }
 
-    int freq, duration_ms, vol;
-    boolean split_success = split_clj(tokens[i], freq, duration_ms, vol);
-    if (!split_success) continue;
+    if (eol) break;
+    cursor += (n+1);
+  }
+}
 
-    #ifdef DEBUG
-      Serial.print(i); Serial.print(" Note split: "); Serial.print(freq); Serial.print("\t"); Serial.print(duration_ms); Serial.print("\t"); Serial.println(vol);
-    #endif
-
-    play_clj(freq, duration_ms, vol);
+// Returns the address of where the substring is
+boolean tokenize(const char* str1, char delimiter, int& size) {
+  unsigned int len = strlen(str1);
+  for (int i=0; i<len; i++) {
+    if (str1[i] == delimiter || str1[i] == '\0') {
+      size = i;
+      return (str1[i] == '\0');
+    }
   }
 }
 
