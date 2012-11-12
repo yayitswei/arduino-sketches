@@ -3,7 +3,7 @@
 #include <string.h>
 #include "songs.h"
 
-#define DEBUG 1
+// #define DEBUG
 
 #define OCTAVE_MULTIPLIER 2
 #define HALF_STEP 1.059463094359295
@@ -20,8 +20,8 @@
 
 #define NUM_WORDS 3
 #define MAX_WORD_LENGTH 12
-#define MAX_SONG_LENGTH 1024
-#define MAX_NOTES 84
+#define MAX_SONG_LENGTH 512
+#define MAX_NOTES 42
 
 int g_song_num = MODE_ROTATE;
 int g_song_num_changed = false;
@@ -31,14 +31,18 @@ void setup() {
   pinMode(LED_PIN, OUTPUT); 
   attachInterrupt(0, change_song, RISING);
 
-  if (DEBUG) Serial.begin(9600);
+  #ifdef DEBUG
+    Serial.begin(9600);
+  #endif
 }
 
 void loop() {
   static int i = 0; // current song number
   parse_song(songs[i]);
   i = (g_song_num == MODE_ROTATE) ? i+1 : g_song_num;
-  if (DEBUG) { Serial.print("Song num: "); Serial.println(i); }
+  #ifdef DEBUG
+    Serial.print("Song num: "); Serial.println(i);
+  #endif
   i = i % g_num_songs;
   delay(1000);
 }
@@ -46,12 +50,16 @@ void loop() {
 void parse_song(char* song) {
   // Songs that
   int mode = get_song_mode(song);
-  if (DEBUG) { Serial.println(mode); }
+
   if (mode == MODE_CLJ) {
-    if (DEBUG) { Serial.println("CLJ mode!"); }
+    #ifdef DEBUG
+      Serial.println("CLJ mode!");
+    #endif
     parse_clj(song);
   } else if (mode == MODE_ABC) {
-    if (DEBUG) { Serial.println("ABC mode"); }
+    #ifdef DEBUG
+      Serial.println("ABC mode");
+    #endif
     parse_abc(song);
   } // Skip songs that have MODE_BAD
 }
@@ -91,21 +99,29 @@ void parse_abc(char* song) {
 
 void parse_clj(const char* song_orig) {
   char song[MAX_SONG_LENGTH];
-  if (DEBUG) { Serial.println("Copying song"); }
+  #ifdef DEBUG
+    Serial.println("Copying song");
+  #endif
   strcpy(song, song_orig);
 
   // Not terribly efficient, but loads the file first before playing anything
   char* tokens[MAX_NOTES];
 
-  if (DEBUG) { Serial.println("Tokenizing"); }
+  #ifdef DEBUG
+    Serial.println("Tokenizing");
+  #endif
   tokens[0] = strtok(song, " ");
   if (tokens[0] == NULL) return;
   for (int i=1; i<MAX_NOTES; i++) {
     tokens[i] = strtok(NULL, " ");
     if (tokens[i] == NULL) break;
-    if (DEBUG) Serial.println(tokens[i]);
+    #ifdef DEBUG
+      Serial.println(tokens[i]);
+    #endif
   }
-  if (DEBUG) Serial.println("Done parsing.");
+  #ifdef DEBUG
+    Serial.println("Done parsing.");
+  #endif
 
   // Now the tokens should be loaded
   for (int i=0; i<MAX_NOTES; i++) {
@@ -120,7 +136,9 @@ void parse_clj(const char* song_orig) {
     boolean split_success = split_clj(tokens[i], freq, duration_ms, vol);
     if (!split_success) continue;
 
-    if (DEBUG) { Serial.print(i); Serial.print(" Note split: "); Serial.print(freq); Serial.print("\t"); Serial.print(duration_ms); Serial.print("\t"); Serial.println(vol); }
+    #ifdef DEBUG
+      Serial.print(i); Serial.print(" Note split: "); Serial.print(freq); Serial.print("\t"); Serial.print(duration_ms); Serial.print("\t"); Serial.println(vol);
+    #endif
 
     play_clj(freq, duration_ms, vol);
   }
@@ -172,7 +190,9 @@ void play_note(char note, unsigned int octave, int duration_ms_ms) {
   
   // Take into account the octave, and then shift frequency by the correct number of half steps
   double freq = BASE_A * pow(OCTAVE_MULTIPLIER, (float)octave - MIDDLE_OCTAVE) * pow(HALF_STEP, hs) * pow(HALF_STEP, sharp);
-  if (DEBUG) { Serial.print("Octave: "); Serial.print(octave); Serial.print("\tHalf steps: "); Serial.print(hs); Serial.print("\tSharp: "); Serial.print(sharp); Serial.print("\t");}
+  #ifdef DEBUG
+    Serial.print("Octave: "); Serial.print(octave); Serial.print("\tHalf steps: "); Serial.print(hs); Serial.print("\tSharp: "); Serial.print(sharp); Serial.print("\t");
+  #endif
   make_tone(int(freq), duration_ms_ms, 1);
 }
 
@@ -189,7 +209,9 @@ void change_song() {
 
 // IMPORTANT: Volume is currently unused
 void make_tone(int freq, int duration_ms_ms, int volume) {
-  if (DEBUG) { Serial.print("Tone: "); Serial.print(freq); Serial.print("\t"); Serial.print(duration_ms_ms); Serial.print("\t"); Serial.println(volume); }
+  #ifdef DEBUG
+    Serial.print("Tone: "); Serial.print(freq); Serial.print("\t"); Serial.print(duration_ms_ms); Serial.print("\t"); Serial.println(volume);
+  #endif
   digitalWrite(LED_PIN, HIGH); // Visual representation of a note being played
   tone(OUTPUT_PIN, freq, duration_ms_ms);
 
