@@ -1,4 +1,4 @@
-// #define DEBUG
+#define DEBUG
 
 #define SIG_PIN 7
 #define PIEZO_PIN 8
@@ -8,10 +8,12 @@
 #define OUTPUT_PIN 8
 
 #define TOLERANCE 5 // in mm
-#define KEY_SIZE 12 // in mm
+#define KEY_SIZE 15 // in mm
 
 void setup() {
-  Serial.begin(9600);
+  #ifdef DEBUG
+    Serial.begin(9600);
+  #endif
 }
 
 void loop() {
@@ -29,9 +31,11 @@ void loop() {
   }
   
   if (key_num < 30) {
-    play_clj(key_to_note_pentatonic(cur_key), 50, 13);
+    play_clj(key_to_note_blues(cur_key), 100, 13);
   }
-  Serial.println(duration_to_mm(pulse_duration));
+  #ifdef DEBUG
+    Serial.println(duration_to_mm(pulse_duration));
+  #endif
 //  delay(20);
 }
 
@@ -68,27 +72,27 @@ long key_to_mm(int key_num) {
 long key_to_note_major(int key_num) {
   int steps[7] = {0, 2, 4, 5, 7, 9, 11};
 
-  int octave = (key_num / 7) + 5;
+  int octave = (key_num / 7) + 3;
   int scale_tone = steps[key_num % 7];
   return (octave * 12 + scale_tone);
 }
 
 long key_to_note_blues(int key_num) {
   int steps[6] = {0, 3, 5, 6, 7, 10};
-  int octave = (key_num / 6) + 5;
+  int octave = (key_num / 6) + 3;
   int scale_tone = steps[key_num % 6];
   return (octave * 12 + scale_tone);
 }
 
 long key_to_note_pentatonic(int key_num) {
   int steps[5] = {0, 2, 4, 7, 9};
-  int octave = (key_num / 5) + 5;
+  int octave = (key_num / 5) + 3;
   int scale_tone = steps[key_num % 5];
   return (octave * 12 + scale_tone);
 }
 
 long key_to_note_chromatic(int key_num) {
-  return (key_num + 60);
+  return (key_num + 36);
 }
 
 
@@ -103,7 +107,6 @@ void make_tone(int freq, int duration_ms_ms, int volume) {
   #endif
   tone(OUTPUT_PIN, freq, duration_ms_ms);
 
-  delay(duration_ms_ms);
-//  delay(10);
+  delay(duration_ms_ms-10);
 }
 
