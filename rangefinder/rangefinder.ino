@@ -1,4 +1,4 @@
-#define DEBUG
+//#define DEBUG
 
 #define SIG_PIN 7
 #define PIEZO_PIN 8
@@ -11,32 +11,31 @@
 #define KEY_SIZE 15 // in mm
 
 void setup() {
-  #ifdef DEBUG
-    Serial.begin(9600);
-  #endif
+  Serial.begin(9600);
 }
 
 void loop() {
-  static int cur_key = 0;
+  static byte cur_key = 0;
 
   send_pulse();
   long pulse_duration = read_pulse();
 
   long distance = duration_to_mm(pulse_duration);
-  int key_num = mm_to_key(distance);
+  byte key_num = mm_to_key(distance);
   
   // working in mm
   if (distance - key_to_mm(cur_key) < -TOLERANCE || distance - key_to_mm(cur_key) > KEY_SIZE + TOLERANCE) {
     cur_key = key_num;
   }
-  
-  if (key_num < 30) {
+
+  if (cur_key < 30) {
     play_clj(key_to_note_blues(cur_key), 100, 13);
+    Serial.write(cur_key);
   }
   #ifdef DEBUG
     Serial.println(duration_to_mm(pulse_duration));
   #endif
-//  delay(20);
+  delay(10);
 }
 
 void send_pulse() {
@@ -61,12 +60,12 @@ long duration_to_mm(long duration) {
   return (duration * 3315 / 20000 );
 }
 
-long mm_to_key(long mm) {
-  return (mm / KEY_SIZE); // truncates
+byte mm_to_key(long mm) {
+  return ((mm / KEY_SIZE > 255) ? 255 : (mm / KEY_SIZE)); // truncates
 }
 
-long key_to_mm(int key_num) {
-  return (key_num * KEY_SIZE); // lower bound
+long key_to_mm(byte key_num) {
+  return ((long)key_num * KEY_SIZE); // lower bound
 }
 
 long key_to_note_major(int key_num) {
@@ -107,6 +106,6 @@ void make_tone(int freq, int duration_ms_ms, int volume) {
   #endif
   tone(OUTPUT_PIN, freq, duration_ms_ms);
 
-  delay(duration_ms_ms-10);
+  delay(duration_ms_ms-20);
 }
 
